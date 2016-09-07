@@ -4,7 +4,7 @@
 
 module LogicSimplifier (
 -- * Type definition and Patterns
-    Logic(..),
+    Logic,
     pattern T,
     pattern F,
     pattern Var,
@@ -101,11 +101,12 @@ instance Show rec => Show (Logic' rec) where
 
 -- | Checks if two (Bool -> Bool -> Bool) functions are the same.
 are2BoolFunsSame :: (Bool -> Bool -> Bool) -> (Bool -> Bool -> Bool) -> Bool
-are2BoolFunsSame f g = and $ map (distributeFun (==) f' g') possible2BoolArgs
-  where
-    f' = uncurry f
-    g' = uncurry g
-    distributeFun comb f g x = f x `comb` g x
+are2BoolFunsSame f g
+  = and $ map (distributeFn (==) (uncurry f) (uncurry g)) possible2BoolArgs
+
+
+distributeFn :: (b -> c -> r) -> (a -> b) -> (a -> c) -> a -> r
+distributeFn comb f g x = f x `comb` g x
 
 
 possible2BoolArgs :: [(Bool, Bool)]
