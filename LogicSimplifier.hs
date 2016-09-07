@@ -12,6 +12,7 @@ module LogicSimplifier (
     pattern AND,
     pattern OR,
     pattern Op,
+    Info(..),
     
 -- * And/Or
     (-&-),
@@ -24,7 +25,6 @@ module LogicSimplifier (
 -- * Reshapers
     buReshape,
     tdReshape,
-    tdReshape',
     
 -- * Simplifying functions
     or_ify,
@@ -152,29 +152,18 @@ buReshape :: (Functor f) => (Fix f -> Fix f) -> Fix f -> Fix f
 buReshape fn = fn . Fix . fmap (buReshape fn) . unFix
 
 
+-- | Support data type to simplify tdReshape and make it easier to understand
+data Info = Finished
+          | RepeatFn
+          | GoFurther
+
 -- | Takes a function that can change the layout of Fix f, makes it recursive 
 -- and applies it from the top down on Fix f
--- 
--- The Maybe in the return value of the function is there so that the function 
--- itself can decide when to descend down the structure of Fix f and when to 
--- try applying itself to the last result.
-tdReshape :: (Functor f) => (Fix f -> Maybe (Fix f)) -> Fix f -> Fix f
+tdReshape :: (Functor f) => (Fix f -> (Info, Fix f)) -> Fix f -> Fix f
 tdReshape fn x = case fn x of
-                   Nothing -> Fix . fmap (tdReshape fn) . unFix $ x
-                   Just y  -> tdReshape fn y
-
-
--- | Same as tdReshape but instead uses Either instead of Maybe.
---
--- Left x signifies that the function should apply itself to the last result
--- - the x that it returned.
---
--- Right x signifies that the function should descend down the structure of x
--- before applying itself again.
-tdReshape' :: (Functor f) => (Fix f -> Either (Fix f) (Fix f)) -> Fix f -> Fix f
-tdReshape' fn x = case fn x of
-                    Left y  -> Fix . fmap (tdReshape' fn) . unFix $ y
-                    Right y -> tdReshape' fn y
+                   (Finished,  y) -> y
+                   (RepeatFn,  y) -> Fix . fmap (tdReshape fn) . unFix $ y
+                   (GoFurther, y) -> tdReshape fn y
 
 
 toPrettyPrint' :: Logic' Doc -> Doc
@@ -260,15 +249,15 @@ merge :: Logic -> Logic
 merge = buReshape merge' . removeDoubleNegations
 
 
-moveNegationsInside' :: Logic -> Maybe Logic
+moveNegationsInside' :: Logic -> (Info, Logic)
 moveNegationsInside' (Not (AND l))
-    = Just $ OR $ fmap Not l
+    = (GoFurther, OR $ fmap Not l)
 moveNegationsInside' (Not (OR  l))
-    = Just $ AND $ fmap Not l
+    = (GoFurther, AND $ fmap Not l)
 moveNegationsInside' (Not (Op name f x y))
-    = Just $ Op name (\a b -> not $ f a b) x y
-moveNegationsInside' _
-    = Nothing
+    = (GoFurther, Op name (\a b -> not $ f a b) x y)
+moveNegationsInside' x
+    = (GoFurther, x)
 
 -- | Puts negations as much inside the structure of the logical expression 
 -- as it can
