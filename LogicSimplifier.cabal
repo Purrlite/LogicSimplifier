@@ -2,11 +2,11 @@ name:                LogicSimplifier
 version:             0.1
 synopsis:            Simplifies logical expressions.
 description:         See README.md
-homepage:            https://github.com/Purlox/LogicSimplifier
+homepage:            https://github.com/Purrlite/LogicSimplifier
 license:             MIT
 license-file:        LICENSE
-author:              Purlox
-maintainer:          purlox@gmail.com
+author:              Purrlite
+maintainer:          Purrlite@gmail.com
 -- copyright:           
 category:            Math
 build-type:          Simple
